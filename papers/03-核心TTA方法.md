@@ -4,66 +4,496 @@
 
 ---
 
-## 🔥 基于熵的方法 (Entropy-Based)
-
-| # | 论文标题 | 作者 | 发表venue | 链接 | 核心贡献 |
-|:-:|---------|------|-----------|------|---------|
-| 1 | EATA: Efficient Test-Time Model Adaptation without Forgetting | Niu et al. | ICML 2022 | [arXiv](https://arxiv.org/abs/2204.02610) | 样本高效熵最小化，引入抗遗忘正则化 |
-| 2 | Towards Stable Test-Time Adaptation in Dynamic Wild World (SAR) | Niu et al. | ICLR 2023 (Oral) | [arXiv](https://arxiv.org/abs/2302.12400) | 锐度感知熵最小化，过滤大梯度噪声样本实现稳定TTA |
-| 3 | DELTA: Degradation-Free Fully Test-Time Adaptation | Zhao et al. | ICLR 2023 | [arXiv](https://arxiv.org/abs/2301.13018) | 测试时批重归一化 + 动态在线重加权防止退化 |
-| 4 | COME: Test-time Adaption by Conservatively Minimizing Entropy | Zhang et al. | ICLR 2025 | [arXiv](https://arxiv.org/abs/2410.10894) | 建模Dirichlet先验，保守熵最小化防止模型崩溃 |
-| 5 | DeYO: Entropy is not Enough for TTA | Lee et al. | ICLR 2024 (Spotlight) | [GitHub](https://github.com/Jhyun17/DeYO) | 提出PLPD置信度度量，结合熵与物体形状影响进行样本选择 |
+## 🔥 一、基于熵的方法 (Entropy-Based)
 
 ---
 
-## 🎨 基于增强的方法 (Augmentation-Based)
+### 1. EATA — Efficient Test-Time Model Adaptation without Forgetting
 
-| # | 论文标题 | 作者 | 发表venue | 链接 | 核心贡献 |
-|:-:|---------|------|-----------|------|---------|
-| 6 | MEMO: Test Time Robustness via Adaptation and Augmentation | Zhang et al. | NeurIPS 2022 | [arXiv](https://arxiv.org/abs/2110.09506) | 通过最小化单个测试样本多个增强视图的边际熵实现适应 |
-| 7 | Better Aggregation in Test-Time Augmentation | Shanmugam et al. | ICCV 2021 | [链接](https://openaccess.thecvf.com/content/ICCV2021/html/Shanmugam_Better_Aggregation_in_Test-Time_Augmentation_ICCV_2021_paper.html) | 分析并改进测试时增强的预测聚合策略 |
+| 项目 | 内容 |
+|------|------|
+| **作者** | Shuaicheng Niu, Jiaxiang Wu, Yifan Zhang, Yaofo Chen, Shijian Zheng, Peilin Zhao, Mingkui Tan |
+| **发表** | ICML 2022 |
+| **链接** | [arXiv 2204.02610](https://arxiv.org/abs/2204.02610) |
 
----
+### 研究背景与动机
+Tent对所有测试样本无差别地进行熵最小化，导致两个问题：(1) 某些高熵样本本身就是困难样本或噪声样本，对它们做熵最小化会引入有害梯度；(2) 持续更新会导致模型逐渐"遗忘"源域知识。EATA的动机是**让TTA既高效又抗遗忘**。
 
-## 📊 基于归一化的方法 (Normalization-Based)
+### 核心贡献
+1. 提出**样本感知熵过滤**（Sample-Aware Entropy Filter）：只选择"可靠"的低熵样本进行适应，排除高熵噪声样本
+2. 引入**抗遗忘正则化**（Anti-Forgetting Regularization）：用Fisher信息矩阵约束参数不要偏离源模型太远
+3. 两个创新点分别解决了Tent的样本质量和遗忘问题
 
-| # | 论文标题 | 作者 | 发表venue | 链接 | 核心贡献 |
-|:-:|---------|------|-----------|------|---------|
-| 8 | Dynamic Unsupervised Domain Adaptation by Normalization (DUA) | Mirza et al. | CVPR 2022 | [GitHub](https://github.com/jmiemirza/DUA) | 仅在线适应BN统计量，需<1%目标数据，无需反向传播 |
-| 9 | Unraveling Batch Normalization for Realistic TTA (TEMA) | Su et al. | AAAI 2024 | [arXiv](https://arxiv.org/abs/2312.09486) | 识别批次中类别多样性不足为关键问题，提出自适应数据范围EMA |
-| 10 | TTN: A Domain-Shift Aware Batch Normalization in TTA | Lim et al. | ICLR 2023 | [链接](https://openreview.net/pdf?id=EQfeudmWLQ) | 域偏移感知的BN层用于测试时适应 |
+### 方法详解
+- **可靠样本选择**：设定熵阈值 $E_0$，仅对熵 $H(x) < E_0$ 的样本执行适应。阈值根据均匀分布的熵自适应设定
+- **Fisher正则化**：$L = L_{ent}(x) + \lambda \sum_i F_i (\theta_i - \theta_i^{src})^2$，其中 $F_i$ 是Fisher信息矩阵对角项，衡量参数对源域任务的重要性。重要参数更新幅度被约束
+- **效率提升**：被过滤掉的样本不做反向传播，减少计算量
 
----
+### 实验设置与结果
+- **数据集**：CIFAR-10/100-C、ImageNet-C
+- **结果**：在ImageNet-C上比Tent降低约4%错误率，且在持续适应场景下不会遗忘（Tent在100轮后性能崩溃，EATA保持稳定）
+- **效率**：通过样本过滤减少约20-40%的反向传播次数
 
-## 🏷️ 自训练与伪标签方法 (Self-Training & Pseudo-Label)
-
-| # | 论文标题 | 作者 | 发表venue | 链接 | 核心贡献 |
-|:-:|---------|------|-----------|------|---------|
-| 11 | Contrastive Test-Time Adaptation (AdaContrast) | Chen et al. | CVPR 2022 | [arXiv](https://arxiv.org/abs/2204.10377) | 结合对比学习与最近邻投票在线伪标签精炼 |
-| 12 | Parameter-Free Online Test-Time Adaptation (LAME) | Boudiaf et al. | CVPR 2022 | [arXiv](https://arxiv.org/abs/2201.05718) | 拉普拉斯调整最大似然估计，适应模型输出而非参数 |
-| 13 | Test-Time Classifier Adjustment Module (T3A) | Iwasawa & Matsuo | NeurIPS 2021 (Spotlight) | [GitHub](https://github.com/matsuolab/T3A) | 无需反向传播，通过伪原型表示调整分类器 |
-| 14 | TeSLA: Test-Time Self-Learning With Automatic Adversarial Augmentation | Tomar et al. | CVPR 2023 | [arXiv](https://arxiv.org/abs/2303.09870) | 在线知识蒸馏 + 可学习对抗增强 + 软伪标签精炼 |
-| 15 | Improved Self-Training for Test-Time Adaptation (IST) | Ma et al. | CVPR 2024 | [链接](https://openaccess.thecvf.com/content/CVPR2024/html/Ma_Improved_Self-Training_for_Test-Time_Adaptation_CVPR_2024_paper.html) | 基于图的伪标签校正 + 参数移动平均实现稳定适应 |
-| 16 | Conjugate Pseudo-Labels for Source-Free Domain Adaptation | Goyal et al. | NeurIPS 2022 | [链接](https://proceedings.neurips.cc/paper_files/paper/2022) | 引入共轭伪标签用于更鲁棒的域偏移自训练 |
-
----
-
-## 🎯 特征对齐方法 (Feature Alignment)
-
-| # | 论文标题 | 作者 | 发表venue | 链接 | 核心贡献 |
-|:-:|---------|------|-----------|------|---------|
-| 17 | ActMAD: Activation Matching to Align Distributions for TTT | Mirza et al. | CVPR 2023 | [arXiv](https://arxiv.org/abs/2211.12870) | 跨多层对齐OOD测试数据与训练数据的激活统计量 |
-| 18 | Ada-ReAlign: Adaptive Representation Alignment in Non-stationary Environments | Zhang et al. | NeurIPS 2024 | [链接](https://openreview.net/forum?id=0EfUYVMrLv) | 使用不同窗口大小的多基模型 + 元学习器实现自适应对齐 |
+### 局限性
+1. 熵阈值虽然自适应但仍是启发式的，对不同偏移类型可能不够灵活
+2. Fisher信息矩阵的计算需要源域数据或预存统计量
+3. 在极端分布偏移下，大部分样本被过滤掉，适应信号不足
 
 ---
 
-## 技术路线图
+### 2. SAR — Towards Stable Test-Time Adaptation in Dynamic Wild World
+
+| 项目 | 内容 |
+|------|------|
+| **作者** | Shuaicheng Niu, Jiaxiang Wu, Yifan Zhang, Zhiquan Wen, Yaofo Chen, Peilin Zhao, Mingkui Tan |
+| **发表** | ICLR 2023 (**Oral**) |
+| **链接** | [arXiv 2302.12400](https://arxiv.org/abs/2302.12400) |
+
+### 研究背景与动机
+现实世界的测试数据远比实验室环境复杂：(1) 偏移类型和强度持续变化；(2) 批次中可能包含大量来自不同分布的样本；(3) 类别分布可能严重不均衡。Tent和EATA在这些"动态野外"（Dynamic Wild World）场景中仍然不够稳定。SAR的核心发现是：**不稳定的主要原因是大梯度噪声样本**，这些样本的梯度范数很大但方向有害。
+
+### 核心贡献
+1. 系统定义了现实TTA的挑战：混合偏移、小批次、类不平衡、在线持续适应
+2. 提出**锐度感知熵最小化**（Sharpness-Aware Entropy Minimization）：在平坦的损失景观区域优化，提高对噪声梯度的鲁棒性
+3. 提出**可靠样本过滤+模型恢复机制**：检测到模型崩溃趋势时自动恢复
+
+### 方法详解
+- **锐度感知最小化（SAM for TTA）**：不是直接在当前参数处最小化熵，而是先找到邻域内熵最大的点（对抗扰动），然后在该扰动方向上做梯度下降。这使得模型收敛到更平坦的区域，对噪声更鲁棒
+- **样本过滤**：移除梯度范数异常大的样本，这些样本通常是噪声源
+- **模型恢复**：监控模型输出的熵均值，当检测到熵突然升高（崩溃信号）时，将模型恢复到最近的稳定状态
+
+### 实验设置与结果
+- **数据集**：ImageNet-C（标准）、ImageNet-C（混合偏移）、自定义野外TTA基准
+- **基线对比**：Tent、EATA、CoTTA、MEMO等11种方法
+- **结果**：在混合偏移场景下，SAR的错误率比Tent低约10%，比EATA低约5%。在标准ImageNet-C上也取得SOTA
+- **鲁棒性**：在批次大小=1的极端场景下仍然稳定
+
+### 局限性
+1. SAM优化需要两次前向传播和一次反向传播，计算成本是Tent的约2倍
+2. 模型恢复机制是启发式的，阈值需要调整
+3. 对于某些类型的偏移（如标签偏移），锐度感知方法没有明显优势
+
+---
+
+### 3. DELTA — Degradation-Free Fully Test-Time Adaptation
+
+| 项目 | 内容 |
+|------|------|
+| **作者** | Bowen Zhao, Chen Chen, Shu-Tao Xia |
+| **发表** | ICLR 2023 |
+| **链接** | [arXiv 2301.13018](https://arxiv.org/abs/2301.13018) |
+
+### 研究背景与动机
+Tent在持续适应中会退化（degradation），即适应一段时间后性能反而低于不适应时。DELTA团队发现退化的根本原因有两个：(1) 测试批次的BN统计量估计不稳定；(2) 所有样本被同等对待，噪声样本拖累整体。
+
+### 核心贡献
+1. 提出**测试时批重归一化**（Test-Time Batch Renormalization）替代标准BN，提供更稳定的统计量估计
+2. 提出**动态在线重加权**（Dynamic Online Reweighting）：自适应地为每个样本分配不同的权重
+3. 实现了"无退化"的完全测试时适应
+
+### 方法详解
+- **批重归一化（Batch Renormalization）**：在标准BN基础上引入校正因子 $r$ 和 $d$，将测试批次统计量向运行均值/方差靠拢，减少单批次估计的方差
+- **样本重加权**：基于样本的梯度一致性来分配权重——梯度方向与整体一致的样本获得高权重，梯度方向偏离的样本（可能是噪声）获得低权重
+
+### 实验设置与结果
+- **数据集**：CIFAR-10/100-C、ImageNet-C、持续适应设置
+- **结果**：在标准和持续设置下均优于Tent/EATA。在持续适应200轮后，Tent退化了15%，DELTA保持不退化
+
+### 局限性
+1. 批重归一化引入额外超参数（$r_{max}$, $d_{max}$），需要调节
+2. 样本权重的计算需要额外的前向传播
+3. 对于非BN架构不适用
+
+---
+
+### 4. COME — Test-time Adaption by Conservatively Minimizing Entropy
+
+| 项目 | 内容 |
+|------|------|
+| **作者** | Yanming Zhang et al. |
+| **发表** | ICLR 2025 |
+| **链接** | [arXiv 2410.10894](https://arxiv.org/abs/2410.10894) |
+
+### 研究背景与动机
+标准熵最小化的一个根本缺陷是：它对模型预测的绝对值优化，容易导致模型过度自信（over-confident），最终崩溃到将所有样本分为少数几个类。COME的核心洞见是：应该**保守地**最小化熵，避免过度适应。
+
+### 核心贡献
+1. 从贝叶斯视角重新理解TTA：将模型预测视为Dirichlet分布的参数
+2. 提出**保守熵最小化**：在Dirichlet先验下进行熵最小化，先验约束防止预测分布坍缩
+3. 有效解决了TTA中的模式崩溃问题
+
+### 方法详解
+- 将softmax输出视为Dirichlet分布的均值参数，引入Dirichlet集中度参数作为"保守程度"
+- 保守熵 = 标准熵 - Dirichlet正则项。正则项阻止预测概率过度集中到某一类
+- 集中度参数可自适应调整：偏移小时更"激进"适应，偏移大时更"保守"
+
+### 实验设置与结果
+- **数据集**：CIFAR-10/100-C、ImageNet-C
+- **结果**：在ImageNet-C上比SAR进一步降低约1-2%错误率。在崩溃测试中，Tent在第50轮崩溃，COME保持稳定到第200轮以上
+
+### 局限性
+1. Dirichlet建模增加了数学复杂度
+2. 集中度参数的自适应调整策略仍需进一步研究
+3. 在简单偏移场景下相比标准熵最小化优势不大
+
+---
+
+### 5. DeYO — Entropy is not Enough for Test-Time Adaptation: From the Perspective of Disentangled Factors
+
+| 项目 | 内容 |
+|------|------|
+| **作者** | Jonghyun Lee et al. |
+| **发表** | ICLR 2024 (**Spotlight**) |
+| **链接** | [GitHub](https://github.com/Jhyun17/DeYO) |
+
+### 研究背景与动机
+现有TTA方法几乎全部依赖预测熵作为样本可靠性的唯一指标。但DeYO发现一个关键问题：**低熵不等于正确**。有些样本虽然预测熵低（模型自信），但预测是错误的——模型的自信来自于对"捷径特征"（如背景纹理）的依赖，而非真正的物体语义特征。
+
+### 核心贡献
+1. 提出**PLPD**（Pseudo-Label Prediction Difference）指标：衡量模型预测对物体区域遮挡的敏感度。如果遮挡物体后预测不变，说明模型依赖的是背景而非物体
+2. 结合熵和PLPD构建更可靠的样本选择标准
+3. 证明了"熵不够"，需要语义层面的信号来补充
+
+### 方法详解
+- 对输入图像进行patch遮挡，比较遮挡前后的预测变化
+- PLPD高 = 预测依赖物体区域 = 基于正确特征的预测 = 可靠样本
+- PLPD低 = 预测不依赖物体 = 基于捷径特征的预测 = 不可靠样本
+- 最终选择标准：低熵 AND 高PLPD的样本才进行适应
+
+### 实验设置与结果
+- **数据集**：ImageNet-C、ImageNet-R、CIFAR-10/100-C
+- **结果**：在ImageNet-C上比SAR降低约2%错误率，比EATA降低约4%
+- 在噪声场景下优势更明显（因为噪声样本通常PLPD低）
+
+### 局限性
+1. PLPD计算需要多次前向传播（每个patch位置一次），增加约2-4倍计算量
+2. Patch遮挡策略对不同任务/数据集可能需要调整
+3. 对于整体图像级别的偏移（如全局色偏），PLPD的区分能力有限
+
+---
+
+## 🎨 二、基于增强的方法 (Augmentation-Based)
+
+---
+
+### 6. MEMO — Test Time Robustness via Adaptation and Augmentation
+
+| 项目 | 内容 |
+|------|------|
+| **作者** | Marvin Zhang, Sergey Levine, Chelsea Finn |
+| **发表** | NeurIPS 2022 |
+| **链接** | [arXiv 2110.09506](https://arxiv.org/abs/2110.09506) |
+
+### 研究背景与动机
+Tent等方法需要一个批次的测试数据来估计BN统计量和计算梯度，但在许多实际场景中（如边缘设备、实时应用），测试数据是逐个到来的，只有**单个样本**可用。MEMO的动机是解决**单样本TTA**（single-sample TTA）问题。
+
+### 核心贡献
+1. 首次系统性地解决单样本TTA问题
+2. 核心思想：**一个样本不够，就通过数据增强生成多个增强版本**，对这些增强版本的**边际输出**做熵最小化
+3. 不需要修改训练过程，不需要选择性地更新层
+
+### 方法详解
+- 对单个测试样本 $x$ 生成 $N$ 个增强视图 $\{aug_1(x), aug_2(x), ..., aug_N(x)\}$
+- 计算每个增强视图的softmax输出，然后对这些输出取平均得到**边际输出** $\bar{p} = \frac{1}{N}\sum_i p(y|aug_i(x))$
+- 最小化边际输出的熵 $H(\bar{p})$，更新模型全部参数
+- 直觉：好的模型应该对同一样本的不同增强版本给出一致的预测
+
+### 实验设置与结果
+- **数据集**：ImageNet-C/R/A/Sketch、CIFAR-10/100-C
+- **骨干网络**：ResNet-50/26、ViT
+- **结果**：在单样本设置下，MEMO在ImageNet-C上将ResNet-50的错误率从57.3%降到51.9%
+- 重要发现：MEMO在ViT上也有效（因为不依赖BN层）
+
+### 局限性
+1. **计算开销大**：需要 $N$ 次前向传播（通常N=32-64），比Tent慢约一个数量级
+2. **增强策略敏感**：不同增强方法的效果差异很大，且最优增强组合因任务而异
+3. **更新全部参数风险大**：在偏移很大时可能导致不稳定
+4. 对于某些类型的偏移（如自然域偏移，非损坏类），增强可能引入额外偏移
+
+---
+
+### 7. TIPI — Test Time Adaptation with Transformation Invariance
+
+| 项目 | 内容 |
+|------|------|
+| **作者** | Nguyen et al. |
+| **发表** | CVPR 2023 |
+| **链接** | [CVF](https://openaccess.thecvf.com/content/CVPR2023/html/Nguyen_TIPI_Test_Time_Adaptation_With_Transformation_Invariance_CVPR_2023_paper.html) |
+
+### 研究背景与动机
+熵最小化作为TTA的核心目标有一个理论缺陷：它鼓励模型对任何输入都给出自信预测，即使对噪声/对抗样本也如此。TIPI提出了一个更合理的替代目标：**变换不变性**——好的模型对同一样本的不同变换应该给出相似的预测。
+
+### 核心贡献
+1. 提出**变换不变性损失**作为熵最小化的替代
+2. 该损失更稳健，不会导致模式崩溃
+3. 在小批次（batch=1）场景下比Tent更稳定
+
+### 方法详解
+- 对输入 $x$ 应用变换 $T$（如翻转、平移），最小化 $D(f(x), f(T(x)))$
+- $D$ 是预测分布之间的散度（如KL散度）
+- 不需要标签，只需要模型对变换保持一致
+
+### 实验设置与结果
+- **数据集**：CIFAR-10/100-C、ImageNet-C
+- **结果**：在batch=1时比Tent高约3%准确率，在标准batch下与Tent接近
+- 在持续适应中更稳定
+
+### 局限性
+1. 变换类型的选择是先验的，不同数据集可能需要不同变换
+2. 计算开销比Tent大（需额外前向传播变换后的输入）
+3. 变换不变性是一个较弱的信号，适应速度较慢
+
+---
+
+## 📊 三、基于归一化的方法 (Normalization-Based)
+
+---
+
+### 8. DUA — Dynamic Unsupervised Domain Adaptation by Normalization
+
+| 项目 | 内容 |
+|------|------|
+| **作者** | Muhammad Jehanzeb Mirza et al. |
+| **发表** | CVPR 2022 |
+| **链接** | [GitHub](https://github.com/jmiemirza/DUA) |
+
+### 研究背景与动机
+AdaptiveBN需要用整个测试集来计算统计量，但实际部署中数据是流式到达的。DUA解决的问题是：如何在**极少量**（<1%）目标域数据到达时就完成BN统计量的在线适应。
+
+### 核心贡献
+1. 提出动态BN统计量更新策略：用指数移动平均（EMA）逐步更新
+2. 证明仅需<1%的目标数据就能实现有效适应
+3. **不需要任何反向传播**，计算开销极低
+
+### 方法详解
+- 用衰减因子 $\alpha$ 混合训练统计量和测试统计量：$\mu_{new} = (1-\alpha)\mu_{train} + \alpha \mu_{test}$
+- $\alpha$ 动态衰减：随着看到的测试样本增多，衰减因子逐渐减小，避免后续噪声数据影响
+- 不更新任何可学习参数
+
+### 实验设置与结果
+- **数据集**：CIFAR-10/100-C、ImageNet-C
+- **结果**：在ImageNet-C上仅需看到约100个测试样本（<1%的测试集），就能实现接近使用全部测试集的AdaptiveBN的性能
+- 推理速度与标准推理相同（无反向传播开销）
+
+### 局限性
+1. 只适应统计量不适应参数，适应能力上限较低
+2. 衰减因子的初始值需要手动设定
+3. 不适用于无BN的架构
+
+---
+
+### 9. TEMA — Unraveling Batch Normalization for Realistic Test-Time Adaptation
+
+| 项目 | 内容 |
+|------|------|
+| **作者** | Zixian Su et al. |
+| **发表** | AAAI 2024 |
+| **链接** | [arXiv 2312.09486](https://arxiv.org/abs/2312.09486) |
+
+### 研究背景与动机
+TEMA团队深入分析了BN在真实TTA场景中失败的根本原因，发现关键问题不是统计量估计的方差大，而是**测试批次中的类别多样性不足**。当一个批次中大部分样本属于同一类时，BN统计量会偏向该类的分布，导致其他类的样本被错误归一化。
+
+### 核心贡献
+1. 深入分析了BN在TTA中失败的根源：**类别多样性**问题
+2. 提出自适应数据范围的EMA策略 + 层级校正
+3. 在类别不均衡的真实场景下表现优异
+
+### 方法详解
+- 用EMA动态计算BN统计量，但EMA的窗口大小根据当前批次的类别多样性自适应调整
+- 类别多样性低时→增大EMA窗口（混合更多历史信息稀释偏差）
+- 类别多样性高时→减小EMA窗口（更信任当前批次）
+- 额外的层级校正（per-layer rectification）进一步提高精度
+
+### 实验设置与结果
+- **数据集**：ImageNet-C（标准和类别不均衡设置）、CIFAR系列
+- **结果**：在类别不均衡设置下比Tent/EATA高5-8%的准确率
+
+### 局限性
+1. 类别多样性的在线估计本身是一个挑战
+2. 仍局限于BN架构
+
+---
+
+## 🏷️ 四、自训练与伪标签方法 (Self-Training & Pseudo-Label)
+
+---
+
+### 10. AdaContrast — Contrastive Test-Time Adaptation
+
+| 项目 | 内容 |
+|------|------|
+| **作者** | Dian Chen, Dequan Wang, Trevor Darrell, Sayna Ebrahimi |
+| **发表** | CVPR 2022 |
+| **链接** | [arXiv 2204.10377](https://arxiv.org/abs/2204.10377) |
+
+### 研究背景与动机
+伪标签方法的核心挑战是伪标签的质量——错误的伪标签会导致确认偏差（confirmation bias），即模型的错误被不断强化。AdaContrast的动机是用**对比学习**来改善伪标签质量，同时用**最近邻投票**来平滑伪标签噪声。
+
+### 核心贡献
+1. 将对比学习引入TTA：在测试时构建正负样本对进行对比学习
+2. 提出最近邻投票机制：利用特征空间中的近邻关系来精炼伪标签
+3. 引入多样性正则化防止类别崩溃
+
+### 方法详解
+- **在线对比学习**：维护一个特征memory bank，对新测试样本计算对比损失
+- **最近邻伪标签**：不直接用模型的softmax输出，而是查找memory bank中K个最近邻的预测，取多数投票作为伪标签
+- **多样性正则化**：确保不同batch的预测分布均匀
+
+### 实验设置与结果
+- **数据集**：VisDA-C、DomainNet、Office-Home
+- **结果**：在VisDA-C上达到85.3%准确率，比SHOT高约3%
+
+### 局限性
+1. Memory bank需要额外存储空间
+2. 最近邻搜索在大规模数据上计算开销大
+3. 需要足够多的测试数据来填充memory bank
+
+---
+
+### 11. LAME — Parameter-Free Online Test-Time Adaptation
+
+| 项目 | 内容 |
+|------|------|
+| **作者** | Malik Boudiaf, Romain Mueller, Ismail Ben Ayed, Luca Bertinetto |
+| **发表** | CVPR 2022 |
+| **链接** | [arXiv 2201.05718](https://arxiv.org/abs/2201.05718) |
+
+### 研究背景与动机
+LAME的出发点非常独特：它质疑了"更新模型参数"的必要性。作者发现，在很多TTA方法中，更新参数的收益其实很小，但风险很大（可能崩溃）。不如**不更新参数，而是直接修正模型的输出**。
+
+### 核心贡献
+1. 提出了一个**完全无参数更新**的TTA方法
+2. 用拉普拉斯调整最大似然估计（Laplacian Adjusted Maximum-likelihood Estimation）直接修正输出logits
+3. 利用测试批次中样本间的特征相似性来传播标签信息
+4. 证明了很多时候修正输出比更新参数更安全有效
+
+### 方法详解
+- 构建测试batch中所有样本的特征相似性图（Laplacian图）
+- 通过图上的标签传播（Label Propagation），利用样本间的相似性来平滑和修正模型的原始预测
+- 不进行任何梯度计算或参数更新，仅在输出空间做后处理
+
+### 实验设置与结果
+- **数据集**：ImageNet-C、CIFAR-10/100-C
+- **结果**：在批次大小>=64时性能与Tent相当，在batch=1时远优于Tent
+- 关键优势：**永远不会比不适应更差**（无参数更新=无崩溃风险）
+
+### 局限性
+1. 依赖批次中样本的多样性，批次太小效果差
+2. 适应能力上限受限于原始模型的特征质量
+3. 标签传播假设近邻样本同类，在混合偏移下不一定成立
+
+---
+
+### 12. T3A — Test-Time Classifier Adjustment Module for Model-Agnostic Domain Generalization
+
+| 项目 | 内容 |
+|------|------|
+| **作者** | Yusuke Iwasawa, Yutaka Matsuo |
+| **发表** | NeurIPS 2021 (**Spotlight**) |
+| **链接** | [GitHub](https://github.com/matsuolab/T3A) |
+
+### 研究背景与动机
+大多数TTA方法更新的是特征提取器的参数（通过BN层），但T3A反其道而行之：冻结特征提取器，**在线调整分类器**。动机是：好的特征提取器已经学到了有意义的表征，分布偏移可能只是改变了类别原型在特征空间中的位置。
+
+### 核心贡献
+1. 提出**伪原型**（Pseudo-Prototypes）概念：用高置信度测试样本的特征来估计目标域各类的原型
+2. 用伪原型替代或调整原始分类器权重
+3. **不需要反向传播**，仅需特征提取+最近原型分类
+
+### 方法详解
+- 对每个测试样本，用当前分类器预测类别，如果置信度高于阈值，则将其特征加入对应类别的原型集合
+- 分类时计算测试样本特征与各类伪原型的距离（余弦相似度或欧氏距离），取最近原型的类别
+- 原型可以用累积平均或加权平均动态更新
+
+### 实验设置与结果
+- **数据集**：PACS、VLCS、Office-Home、TerraIncognita、DomainNet
+- **结果**：在DomainBed基准上，T3A作为后处理插件，对ERM平均提升约2-3%
+- 速度极快：无梯度计算，仅多一个最近邻查询
+
+### 局限性
+1. 原型质量依赖于模型初始预测的准确性——如果初始预测大量错误，伪原型也会错误
+2. 类别数量多时，每类可能只有很少样本来估计原型
+3. 仅调整分类头，对特征级别的偏移无法纠正
+
+---
+
+### 13. TeSLA — Test-Time Self-Learning With Automatic Adversarial Augmentation
+
+| 项目 | 内容 |
+|------|------|
+| **作者** | Devavrat Tomar et al. |
+| **发表** | CVPR 2023 |
+| **链接** | [arXiv 2303.09870](https://arxiv.org/abs/2303.09870) |
+
+### 研究背景与动机
+TeSLA认为现有TTA方法的增强策略过于"随机"——标准数据增强产生的增强视图可能并不足以暴露模型的弱点。更好的做法是**自动学习最有挑战性的增强方式**，即对抗性增强。
+
+### 核心贡献
+1. 提出可学习的**对抗增强模块**：自动寻找最具挑战性的增强方式
+2. 使用在线知识蒸馏：教师模型（EMA更新）指导学生模型
+3. 结合软伪标签精炼，减少硬伪标签的噪声
+
+### 方法详解
+- **对抗增强**：通过可微的增强网络（包含颜色变换、几何变换参数），通过梯度上升找到使模型预测最不确定的增强参数
+- **师生框架**：教师模型通过EMA更新，提供稳定的软伪标签；学生模型在对抗增强下学习
+- **温度调节的软标签**：避免硬伪标签的量化噪声
+
+### 实验设置与结果
+- **数据集**：CIFAR-10/100-C、ImageNet-C
+- **结果**：在ImageNet-C上比CoTTA高约3%，比EATA高约5%
+
+### 局限性
+1. 对抗增强的梯度计算增加显著计算开销
+2. 增强网络本身需要在线训练，引入额外的不稳定性
+3. 对于某些任务，对抗增强可能过于激进导致语义改变
+
+---
+
+## 🎯 五、特征对齐方法 (Feature Alignment)
+
+---
+
+### 14. ActMAD — Activation Matching to Align Distributions for Test-Time Training
+
+| 项目 | 内容 |
+|------|------|
+| **作者** | Muhammad Jehanzeb Mirza et al. |
+| **发表** | CVPR 2023 |
+| **链接** | [arXiv 2211.12870](https://arxiv.org/abs/2211.12870) |
+
+### 研究背景与动机
+BN层适应方法只对齐第一层统计量（均值和方差），但深层网络中不同层的激活分布偏移可能各不相同。ActMAD的动机是在**多个层**上对齐测试数据和训练数据的激活分布。
+
+### 核心贡献
+1. 提出跨多层的激活统计量匹配策略
+2. 存储源域训练时各层的激活统计量（均值、方差、高阶矩）
+3. 测试时优化模型使测试数据的激活统计量与源域统计量对齐
+
+### 方法详解
+- **训练时**：记录模型各层在源域数据上的激活分布统计量（均值μ和方差σ²）
+- **测试时**：对当前测试batch计算各层激活的统计量，用L2距离衡量差异
+- **优化目标**：$L = \sum_l (\|\mu_l^{test} - \mu_l^{src}\|^2 + \|\sigma_l^{test} - \sigma_l^{src}\|^2)$
+- 更新模型参数使测试激活分布向源域统计量靠拢
+
+### 实验设置与结果
+- **数据集**：ImageNet-C、CIFAR-10/100-C
+- **结果**：在ImageNet-C上比Tent提升约3-5%。在严重损坏（Level 5）下优势更大
+
+### 局限性
+1. 需要预存源域统计量，增加存储需求
+2. 多层对齐的层选择是一个问题——不是所有层都需要对齐
+3. 统计量对齐假设源域和目标域的类条件分布结构相似，对大域偏移不一定成立
+
+---
+
+## 技术路线总结
 
 ```
-核心TTA方法
-├── 基于熵 ─── Tent → EATA → SAR → DELTA → DeYO → COME
-├── 基于增强 ─── MEMO, TTA聚合
-├── 基于归一化 ─── AdaptiveBN → DUA → TTN → TEMA
-├── 伪标签/自训练 ─── T3A → AdaContrast → LAME → TeSLA → IST
-└── 特征对齐 ─── ActMAD → Ada-ReAlign
+核心TTA方法技术路线图
+├── 基于熵 ─── Tent → EATA(样本过滤+抗遗忘) → SAR(锐度感知) → DELTA(批重归一化)
+│            → DeYO(语义级样本选择) → COME(保守熵最小化)
+├── 基于增强 ─── MEMO(单样本多增强) → TeSLA(对抗增强) → TIPI(变换不变性)
+├── 基于归一化 ── AdaptiveBN → DUA(动态EMA) → TEMA(类别多样性感知)
+├── 伪标签/自训练 ── T3A(伪原型) → AdaContrast(对比+近邻投票) → LAME(无参数输出修正)
+└── 特征对齐 ─── ActMAD(多层激活匹配)
 ```
