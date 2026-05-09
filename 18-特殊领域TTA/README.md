@@ -32,6 +32,23 @@
 | 9 | Specialization after Generalization: Understanding TTT in Foundation Models | NeurIPS 2025 |
 | 10 | Temporal Domain Regret Bound for TTA in Non-stationary Environments | NeurIPS 2024 |
 
+## 🚗 自动驾驶
+
+| # | 方法 | 论文标题 | 发表 |
+|:-:|:----:|---------|:----:|
+| 14 | DUO | Adaptive Dual Uncertainty Optimization for Monocular 3D Detection TTA | ICCV 2025 |
+
+> 详细解读: [📄](自动驾驶/hu2025-duo.md)
+
+## 🤖 机器人与具身AI
+
+| # | 方法 | 论文标题 | 发表 |
+|:-:|:----:|---------|:----:|
+| 15 | TT-VLA | On-the-Fly VLA Adaptation via Test-Time RL | arXiv 2026 |
+| 16 | EVOLVE-VLA | Test-Time Training from Environment Feedback for VLA Models | arXiv 2025 |
+
+> 详细解读: [📄 TT-VLA](机器人与具身AI/liu2026-tt-vla.md) | [📄 EVOLVE-VLA](机器人与具身AI/bai2025-evolve-vla.md)
+
 ## 🧠 其他领域
 
 | # | 方法 | 论文标题 | 发表 |

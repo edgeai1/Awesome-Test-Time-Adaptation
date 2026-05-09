@@ -12,5 +12,7 @@
 | 4 | SAM-TTA | SAM-aware Test-time Adaptation for Universal Medical Segmentation | arXiv 2025 | [arXiv](https://arxiv.org/abs/2506.05221) |
 | 5 | SicTTA | Single Image Continual TTA for Medical Segmentation | MedIA 2025 | [链接](https://www.sciencedirect.com/science/article/abs/pii/S1361841525004050) |
 | 6 | — | A Large Scale Benchmark for TTA in Medical Image Segmentation | arXiv 2024 | [arXiv](https://arxiv.org/abs/2512.02497) |
+| 7 | HyDA | Hypernetworks for Test Time Domain Adaptation in Medical Imaging | MICCAI 2025 | [📄](serebro2025-hyda.md) |
+| 8 | PTTEA | Progressive Test Time Energy Adaptation for Medical Image Segmentation | ICCV 2025 | [📄](zhang2025-pttea.md) |
 
 [← 返回主页](../README.md)

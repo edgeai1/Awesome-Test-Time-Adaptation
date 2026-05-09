@@ -12,5 +12,7 @@
 | 4 | SoTTA | Robust Test-Time Adaptation on Noisy Data Streams | NeurIPS 2023 | [📄](gong2023-sotta.md) |
 | 5 | EcoTTA | Memory-Efficient Continual TTA via Self-Distilled Regularization | CVPR 2023 | [📄](song2023-ecotta.md) |
 | 6 | PeTTA | Persistent Test-time Adaptation in Recurring Testing Scenarios | NeurIPS 2024 | [📄](hoang2024-petta.md) |
+| 7 | ReservoirTTA | Prolonged TTA for Evolving and Recurring Domains | NeurIPS 2025 | [📄](vray2025-reservoir-tta.md) |
+| 8 | ASR | When and Where to Reset Matters for Long-Term TTA | ICLR 2026 | [📄](lim2026-asr.md) |
 
 [← 返回主页](../README.md)
